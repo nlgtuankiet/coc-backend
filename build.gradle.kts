@@ -4,6 +4,7 @@ import org.gradle.api.tasks.testing.logging.TestLogEvent.PASSED
 import org.gradle.api.tasks.testing.logging.TestLogEvent.SKIPPED
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
+
 plugins {
     kotlin("jvm") version "1.6.10"
     application
@@ -35,31 +36,31 @@ dependencies {
     implementation(platform("io.vertx:vertx-stack-depchain:$vertxVersion"))
     implementation("io.vertx:vertx-web")
     implementation("io.vertx:vertx-lang-kotlin")
+    implementation("io.vertx:vertx-web-client")
     implementation(kotlin("stdlib-jdk8"))
     testImplementation("io.vertx:vertx-junit5")
     testImplementation("org.junit.jupiter:junit-jupiter:$junitJupiterVersion")
+//    implementation(files("./build/proguard.jar"))
 }
 
 val compileKotlin: KotlinCompile by tasks
 compileKotlin.kotlinOptions.jvmTarget = "11"
 
-val rename = tasks.create("Rename jat jar").doLast {
-
-}
-
-tasks.withType<ShadowJar> {
+val shadowJarTask: ShadowJar = tasks.withType<ShadowJar> {
     archiveClassifier.set("fat")
     manifest {
         attributes(mapOf("Main-Verticle" to mainVerticleName))
     }
     mergeServiceFiles()
-}.first().doLast {
+}.first()
+
+shadowJarTask.doLast {
     val outputDir = File(buildDir, "libs")
     val fatFile = File(outputDir, "${project.name}-${projectVersion}-fat.jar")
     require(fatFile.exists())
-    fatFile.copyTo(File(outputDir, "app.jar"), true)
+    fatFile.copyTo(File(buildDir, "app.jar"), true)
     val sizeInMb = fatFile.length().toDouble() / 1024 / 1024
-    project.logger.info("Fat file is ${sizeInMb} Mb")
+    project.logger.info("Fat file is $sizeInMb Mb")
 }
 
 tasks.withType<Test> {
@@ -70,7 +71,8 @@ tasks.withType<Test> {
 }
 
 tasks.withType<JavaExec> {
-    args = listOf("run",
+    args = listOf(
+        "run",
         mainVerticleName,
 //        "--redeploy=$watchForChange",
         "--launcher-class=$launcherClassName",

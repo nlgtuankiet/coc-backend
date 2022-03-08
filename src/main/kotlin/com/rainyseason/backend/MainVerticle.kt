@@ -12,7 +12,18 @@ class MainVerticle : AbstractVerticle() {
             .requestHandler { req ->
                 req.response()
                     .putHeader("content-type", "text/plain")
-                    .end("Version 1\n")
+                    .end(buildString {
+                        appendLine("Version 3")
+                        appendLine("isSSL: ${req.isSSL}")
+                        appendLine("params: ${req.params().entries().toList()}")
+                        appendLine("absoluteURI: ${req.absoluteURI()}")
+                        appendLine("query: ${req.query()}")
+                        appendLine("scheme: ${req.scheme()}")
+                        appendLine("header:")
+                        req.headers().forEach { k, v: String ->
+                            appendLine("  ${k}: $v")
+                        }
+                    })
             }
             .listen(port) { http ->
                 if (http.succeeded()) {
