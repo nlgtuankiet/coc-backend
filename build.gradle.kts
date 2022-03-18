@@ -7,12 +7,13 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("jvm") version "1.6.10"
+    kotlin("kapt") version "1.6.10"
     application
     id("com.github.johnrengelman.shadow") version "7.0.0"
 }
 
 group = "com.rainyseason"
-val projectVersion = "1.0.0-SNAPSHOT"
+val projectVersion = "1.0.0"
 version = projectVersion
 
 repositories {
@@ -22,14 +23,14 @@ repositories {
 val vertxVersion = "4.2.5"
 val junitJupiterVersion = "5.7.0"
 
-val mainVerticleName = "com.rainyseason.backend.MainVerticle"
+val mainVerticleName = "com.rainyseason.coc.backend.MainVerticle"
 val launcherClassName = "io.vertx.core.Launcher"
 
 val watchForChange = "src/**/*"
 val doOnChange = "gradle classes"
 
 application {
-    mainClass.set(launcherClassName)
+    mainClass.set("com.rainyseason.coc.backend.Main")
 }
 
 dependencies {
@@ -37,10 +38,14 @@ dependencies {
     implementation("io.vertx:vertx-web")
     implementation("io.vertx:vertx-lang-kotlin")
     implementation("io.vertx:vertx-web-client")
+    implementation("io.vertx:vertx-lang-kotlin-coroutines")
     implementation(kotlin("stdlib-jdk8"))
     testImplementation("io.vertx:vertx-junit5")
     testImplementation("org.junit.jupiter:junit-jupiter:$junitJupiterVersion")
-//    implementation(files("./build/proguard.jar"))
+
+    implementation("com.google.dagger:dagger:2.41")
+    kapt("com.google.dagger:dagger-compiler:2.41")
+
 }
 
 val compileKotlin: KotlinCompile by tasks
@@ -68,14 +73,4 @@ tasks.withType<Test> {
     testLogging {
         events = setOf(PASSED, SKIPPED, FAILED)
     }
-}
-
-tasks.withType<JavaExec> {
-    args = listOf(
-        "run",
-        mainVerticleName,
-//        "--redeploy=$watchForChange",
-        "--launcher-class=$launcherClassName",
-//        "--on-redeploy=$doOnChange"
-    )
 }
