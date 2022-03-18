@@ -10,6 +10,7 @@ plugins {
     kotlin("kapt") version "1.6.10"
     application
     id("com.github.johnrengelman.shadow") version "7.0.0"
+    id("org.jlleitschuh.gradle.ktlint") version "10.2.1"
 }
 
 group = "com.rainyseason"
@@ -38,6 +39,7 @@ dependencies {
     implementation("io.vertx:vertx-web")
     implementation("io.vertx:vertx-lang-kotlin")
     implementation("io.vertx:vertx-web-client")
+    implementation("io.vertx:vertx-auth-jwt")
     implementation("io.vertx:vertx-lang-kotlin-coroutines")
     implementation(kotlin("stdlib-jdk8"))
     testImplementation("io.vertx:vertx-junit5")
@@ -46,6 +48,7 @@ dependencies {
     implementation("com.google.dagger:dagger:2.41")
     kapt("com.google.dagger:dagger-compiler:2.41")
 
+    implementation("com.google.firebase:firebase-admin:8.1.0")
 }
 
 val compileKotlin: KotlinCompile by tasks
@@ -61,7 +64,7 @@ val shadowJarTask: ShadowJar = tasks.withType<ShadowJar> {
 
 shadowJarTask.doLast {
     val outputDir = File(buildDir, "libs")
-    val fatFile = File(outputDir, "${project.name}-${projectVersion}-fat.jar")
+    val fatFile = File(outputDir, "${project.name}-$projectVersion-fat.jar")
     require(fatFile.exists())
     fatFile.copyTo(File(buildDir, "app.jar"), true)
     val sizeInMb = fatFile.length().toDouble() / 1024 / 1024
