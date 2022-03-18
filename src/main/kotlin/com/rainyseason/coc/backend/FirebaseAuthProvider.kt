@@ -19,14 +19,12 @@ class FirebaseAuthProvider @Inject constructor(
         credentials: JsonObject,
         resultHandler: Handler<AsyncResult<User>>,
     ) {
-        println("FirebaseAuthProvider authenticate $credentials")
         try {
             val token = credentials.getString("token")
             require(!token.isNullOrEmpty()) { "Invalid token" }
             firebaseAuth.verifyIdTokenAsync(token).asVertxFuture()
                 .map { firebaseToken ->
                     val user = User.fromToken(token)
-                    println("FirebaseAuthProvider user id: ${firebaseToken.uid}")
                     user.firebaseUid = firebaseToken.uid
                     require(!user.firebaseUid.isNullOrBlank()) { "Invalid uid" }
                     user
