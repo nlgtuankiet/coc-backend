@@ -41,6 +41,8 @@ dependencies {
     implementation("io.vertx:vertx-web-client")
     implementation("io.vertx:vertx-auth-jwt")
     implementation("io.vertx:vertx-lang-kotlin-coroutines")
+    implementation("io.vertx:vertx-web-validation")
+
     implementation(kotlin("stdlib-jdk8"))
     testImplementation("io.vertx:vertx-junit5")
     testImplementation("org.junit.jupiter:junit-jupiter:$junitJupiterVersion")

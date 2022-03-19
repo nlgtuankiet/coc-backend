@@ -26,17 +26,21 @@ class MainVerticle @Inject constructor(
         val server = vertx.createHttpServer()
         val router = Router.router(vertx)
 
-        router.route("/backup/*").handler(authenticationHandler)
-        router.route("/backup/*").handler(
-            BodyHandler.create()
-                .setBodyLimit(2L * 1024 * 1024)
-                .then(buildConfig.isDebug) {
-                    getLogger<BodyHandler>().debug("process body for /backup/*")
-                }
-        )
-        router.post("/backup/watchlist").handler { context: RoutingContext ->
-            handleRoutineContext(context, backupWatchlistHandler)
+        router.post("/backup/watchlist").apply {
+            handler(backupWatchlistHandler.validationHandler)
+            handler(authenticationHandler)
+            handler(
+                BodyHandler.create()
+                    .setBodyLimit(100L * 1024)
+                    .then(buildConfig.isDebug) {
+                        getLogger<BodyHandler>().debug("process body for /backup/*")
+                    }
+            )
+            handler { context: RoutingContext ->
+                handleRoutineContext(context, backupWatchlistHandler)
+            }
         }
+
         server.requestHandler(router).listen(port).await()
         log.debug("HTTP server started on port $port")
     }

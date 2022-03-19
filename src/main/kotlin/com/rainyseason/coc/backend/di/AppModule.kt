@@ -13,6 +13,9 @@ import dagger.Provides
 import io.vertx.core.Vertx
 import io.vertx.ext.web.handler.AuthenticationHandler
 import io.vertx.ext.web.handler.JWTAuthHandler
+import io.vertx.json.schema.SchemaParser
+import io.vertx.json.schema.SchemaRouter
+import io.vertx.json.schema.SchemaRouterOptions
 import org.apache.logging.log4j.LogManager
 import java.io.File
 import java.io.FileInputStream
@@ -27,6 +30,13 @@ object AppModule {
     @Singleton
     fun vertx(): Vertx {
         return Vertx.vertx()
+    }
+
+    @Provides
+    @Singleton
+    fun schemaParser(vertx: Vertx): SchemaParser {
+        val schemaRouter = SchemaRouter.create(vertx, SchemaRouterOptions())
+        return SchemaParser.createDraft201909SchemaParser(schemaRouter)
     }
 
     @Provides
