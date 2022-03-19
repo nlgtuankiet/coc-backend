@@ -6,6 +6,7 @@ import com.rainyseason.coc.backend.util.firebaseUid
 import io.vertx.core.AsyncResult
 import io.vertx.core.Future
 import io.vertx.core.Handler
+import io.vertx.core.Vertx
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.auth.JWTOptions
 import io.vertx.ext.auth.User
@@ -22,6 +23,7 @@ class FirebaseAuthProvider @Inject constructor(
         credentials: JsonObject,
         resultHandler: Handler<AsyncResult<User>>,
     ) {
+        val context = Vertx.currentContext()
         try {
             log.debug("authenticate")
             val token = credentials.getString("token")
@@ -43,8 +45,10 @@ class FirebaseAuthProvider @Inject constructor(
             }
 
             userFuture.onComplete { result ->
-                log.debug("authenticate id: ${result.result()?.firebaseUid}")
-                resultHandler.handle(result)
+                context.runOnContext {
+                    log.debug("authenticate id: ${result.result()?.firebaseUid}")
+                    resultHandler.handle(result)
+                }
             }
         } catch (ex: RuntimeException) {
             resultHandler.handle(Future.failedFuture(ex))
