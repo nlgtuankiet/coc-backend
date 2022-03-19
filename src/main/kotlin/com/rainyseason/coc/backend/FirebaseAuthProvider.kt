@@ -10,28 +10,42 @@ import io.vertx.core.json.JsonObject
 import io.vertx.ext.auth.JWTOptions
 import io.vertx.ext.auth.User
 import io.vertx.ext.auth.jwt.JWTAuth
+import org.apache.logging.log4j.LogManager
 import javax.inject.Inject
 
 class FirebaseAuthProvider @Inject constructor(
     private val firebaseAuth: FirebaseAuth,
+    private val config: BuildConfig,
 ) : JWTAuth {
+    private val log = LogManager.getLogger()
     override fun authenticate(
         credentials: JsonObject,
         resultHandler: Handler<AsyncResult<User>>,
     ) {
         try {
+            log.debug("authenticate")
             val token = credentials.getString("token")
             require(!token.isNullOrEmpty()) { "Invalid token" }
-            firebaseAuth.verifyIdTokenAsync(token).asVertxFuture()
-                .map { firebaseToken ->
-                    val user = User.fromToken(token)
-                    user.firebaseUid = firebaseToken.uid
-                    require(!user.firebaseUid.isNullOrBlank()) { "Invalid uid" }
-                    user
-                }
-                .onComplete { result ->
-                    resultHandler.handle(result)
-                }
+            val userFuture = if (config.isDebug && token == "valid_token") {
+                Future.succeededFuture(
+                    User.fromToken("valid_token").apply {
+                        firebaseUid = "000_test_uid"
+                    }
+                )
+            } else {
+                firebaseAuth.verifyIdTokenAsync(token).asVertxFuture()
+                    .map { firebaseToken ->
+                        val user = User.fromToken(token)
+                        user.firebaseUid = firebaseToken.uid
+                        require(!user.firebaseUid.isNullOrBlank()) { "Invalid uid" }
+                        user
+                    }
+            }
+
+            userFuture.onComplete { result ->
+                log.debug("authenticate id: ${result.result()?.firebaseUid}")
+                resultHandler.handle(result)
+            }
         } catch (ex: RuntimeException) {
             resultHandler.handle(Future.failedFuture(ex))
         }

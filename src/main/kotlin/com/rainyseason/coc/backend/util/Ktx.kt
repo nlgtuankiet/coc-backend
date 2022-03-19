@@ -4,8 +4,11 @@ import com.google.api.core.ApiFuture
 import com.google.api.core.ApiFutureCallback
 import com.google.api.core.ApiFutures
 import com.google.common.util.concurrent.MoreExecutors
+import io.vertx.core.Handler
 import io.vertx.ext.auth.User
 import kotlinx.coroutines.suspendCancellableCoroutine
+import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.Logger
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -51,5 +54,26 @@ fun <T> ApiFuture<T>.asVertxFuture(): VertxFuture<T> {
             },
             MoreExecutors.directExecutor()
         )
+    }
+}
+
+inline fun <reified T> getLogger(): Logger {
+    return LogManager.getLogger(T::class.java)
+}
+
+/**
+ * Execute something after
+ */
+fun <T> Handler<T>.then(
+    shouldWrap: Boolean = true,
+    block: Handler<T>
+): Handler<T> {
+    return if (shouldWrap) {
+        return Handler {
+            this@then.handle(it)
+            block.handle(it)
+        }
+    } else {
+        this@then
     }
 }

@@ -2,6 +2,8 @@ package com.rainyseason.coc.backend
 
 import com.rainyseason.coc.backend.core.handleRoutineContext
 import com.rainyseason.coc.backend.handler.BackupWatchlistHandler
+import com.rainyseason.coc.backend.util.getLogger
+import com.rainyseason.coc.backend.util.then
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
 import io.vertx.ext.web.handler.AuthenticationHandler
@@ -13,7 +15,10 @@ import javax.inject.Inject
 class MainVerticle @Inject constructor(
     private val backupWatchlistHandler: BackupWatchlistHandler,
     private val authenticationHandler: AuthenticationHandler,
+    private val buildConfig: BuildConfig,
 ) : CoroutineVerticle() {
+
+    private val log = getLogger<MainVerticle>()
 
     override suspend fun start() {
         super.start()
@@ -21,12 +26,18 @@ class MainVerticle @Inject constructor(
         val server = vertx.createHttpServer()
         val router = Router.router(vertx)
 
-        router.route("/backup/*").handler(BodyHandler.create().setBodyLimit(2L * 1024 * 1024))
         router.route("/backup/*").handler(authenticationHandler)
+        router.route("/backup/*").handler(
+            BodyHandler.create()
+                .setBodyLimit(2L * 1024 * 1024)
+                .then(buildConfig.isDebug) {
+                    getLogger<BodyHandler>().debug("process body for /backup/*")
+                }
+        )
         router.post("/backup/watchlist").handler { context: RoutingContext ->
             handleRoutineContext(context, backupWatchlistHandler)
         }
         server.requestHandler(router).listen(port).await()
-        println("HTTP server started on port $port")
+        log.debug("HTTP server started on port $port")
     }
 }

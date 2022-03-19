@@ -48,6 +48,10 @@ dependencies {
     implementation("com.google.dagger:dagger:2.41")
     kapt("com.google.dagger:dagger-compiler:2.41")
 
+    implementation(platform("org.apache.logging.log4j:log4j-bom:2.17.2"))
+    implementation("org.apache.logging.log4j:log4j-api")
+    implementation("org.apache.logging.log4j:log4j-core")
+
     implementation("com.google.firebase:firebase-admin:8.1.0")
 }
 

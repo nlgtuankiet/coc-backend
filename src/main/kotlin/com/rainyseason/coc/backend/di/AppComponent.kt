@@ -12,4 +12,10 @@ import javax.inject.Singleton
 interface AppComponent {
     val mainVerticle: MainVerticle
     val vertx: Vertx
+
+    companion object {
+        fun create(): AppComponent {
+            return DaggerAppComponent.create()
+        }
+    }
 }
