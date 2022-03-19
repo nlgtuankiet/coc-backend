@@ -3,6 +3,7 @@ package com.rainyseason.coc.backend
 import com.google.firebase.auth.FirebaseAuth
 import com.rainyseason.coc.backend.util.asVertxFuture
 import com.rainyseason.coc.backend.util.firebaseUid
+import com.rainyseason.coc.backend.util.getLogger
 import io.vertx.core.AsyncResult
 import io.vertx.core.Future
 import io.vertx.core.Handler
@@ -18,7 +19,7 @@ class FirebaseAuthProvider @Inject constructor(
     private val firebaseAuth: FirebaseAuth,
     private val config: BuildConfig,
 ) : JWTAuth {
-    private val log = LogManager.getLogger()
+    private val log = getLogger<FirebaseAuthProvider>()
     override fun authenticate(
         credentials: JsonObject,
         resultHandler: Handler<AsyncResult<User>>,

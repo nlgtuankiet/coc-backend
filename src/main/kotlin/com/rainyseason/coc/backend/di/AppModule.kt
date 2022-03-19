@@ -8,6 +8,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.cloud.FirestoreClient
 import com.rainyseason.coc.backend.BuildConfig
 import com.rainyseason.coc.backend.FirebaseAuthProvider
+import com.rainyseason.coc.backend.util.getLogger
 import dagger.Module
 import dagger.Provides
 import io.vertx.core.Vertx
@@ -24,7 +25,7 @@ import javax.inject.Singleton
 @Module
 object AppModule {
 
-    private val log = LogManager.getLogger(AppModule::class.java)
+    private val log = getLogger<AppModule>()
 
     @Provides
     @Singleton
