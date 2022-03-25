@@ -55,6 +55,10 @@ dependencies {
     implementation("org.apache.logging.log4j:log4j-core")
 
     implementation("com.google.firebase:firebase-admin:8.1.0")
+    implementation("com.squareup.moshi:moshi:1.13.0")
+    kapt("com.squareup.moshi:moshi-kotlin-codegen:1.13.0")
+    kaptTest("com.squareup.moshi:moshi-kotlin-codegen:1.13.0")
+    testImplementation(kotlin("test"))
 }
 
 val compileKotlin: KotlinCompile by tasks
@@ -83,3 +87,15 @@ tasks.withType<Test> {
         events = setOf(PASSED, SKIPPED, FAILED)
     }
 }
+
+tasks.withType<KotlinCompile> {
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_1_8.toString()
+    }
+}
+
+tasks.test {
+    useJUnitPlatform()
+}
+
+
