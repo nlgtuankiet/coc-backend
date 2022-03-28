@@ -57,6 +57,10 @@ fun <T> ApiFuture<T>.asVertxFuture(): VertxFuture<T> {
     }
 }
 
+inline fun <T> T?.notNull(lazyMessage: () -> Any): T {
+    return checkNotNull(this, lazyMessage)
+}
+
 inline fun <reified T> getLogger(): Logger {
     return LogManager.getLogger(T::class.java)
 }
