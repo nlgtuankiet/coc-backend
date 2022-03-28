@@ -8,7 +8,11 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.cloud.FirestoreClient
 import com.rainyseason.coc.backend.BuildConfig
 import com.rainyseason.coc.backend.FirebaseAuthProvider
+import com.rainyseason.coc.backend.data.RawJsonAdapter
+import com.rainyseason.coc.backend.data.coingecko.CoinGeckoService
+import com.rainyseason.coc.backend.data.http.UrlInterceptor
 import com.rainyseason.coc.backend.util.getLogger
+import com.squareup.moshi.Moshi
 import dagger.Module
 import dagger.Provides
 import io.vertx.core.Vertx
@@ -17,7 +21,9 @@ import io.vertx.ext.web.handler.JWTAuthHandler
 import io.vertx.json.schema.SchemaParser
 import io.vertx.json.schema.SchemaRouter
 import io.vertx.json.schema.SchemaRouterOptions
-import org.apache.logging.log4j.LogManager
+import okhttp3.OkHttpClient
+import retrofit2.Retrofit
+import retrofit2.converter.moshi.MoshiConverterFactory
 import java.io.File
 import java.io.FileInputStream
 import javax.inject.Singleton
@@ -31,6 +37,38 @@ object AppModule {
     @Singleton
     fun vertx(): Vertx {
         return Vertx.vertx()
+    }
+
+    @Provides
+    @Singleton
+    fun moshi(): Moshi {
+        return Moshi.Builder()
+            .add(RawJsonAdapter)
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun baseClient(
+        urlInterceptor: UrlInterceptor,
+    ): OkHttpClient {
+        return OkHttpClient.Builder()
+            .addInterceptor(urlInterceptor)
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun coingeckoService(
+        moshi: Moshi,
+        okHttpClient: OkHttpClient,
+    ): CoinGeckoService {
+        return Retrofit.Builder()
+            .baseUrl(CoinGeckoService.BASE_URL)
+            .addConverterFactory(MoshiConverterFactory.create(moshi).asLenient())
+            .callFactory(okHttpClient)
+            .build()
+            .create(CoinGeckoService::class.java)
     }
 
     @Provides

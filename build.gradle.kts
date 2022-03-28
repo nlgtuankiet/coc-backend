@@ -44,6 +44,7 @@ dependencies {
     implementation("io.vertx:vertx-web-validation")
 
     implementation(kotlin("stdlib-jdk8"))
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.0")
     testImplementation("io.vertx:vertx-junit5")
     testImplementation("org.junit.jupiter:junit-jupiter:$junitJupiterVersion")
 
@@ -55,6 +56,8 @@ dependencies {
     implementation("org.apache.logging.log4j:log4j-core")
 
     implementation("com.google.firebase:firebase-admin:8.1.0")
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-moshi:2.9.0")
     implementation("com.squareup.moshi:moshi:1.13.0")
     kapt("com.squareup.moshi:moshi-kotlin-codegen:1.13.0")
     kaptTest("com.squareup.moshi:moshi-kotlin-codegen:1.13.0")
