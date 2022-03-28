@@ -6,7 +6,7 @@ import io.vertx.core.Vertx
 import javax.inject.Singleton
 
 @Component(
-    modules = [AppModule::class]
+    modules = [AppModule::class, AppBinding::class]
 )
 @Singleton
 interface AppComponent {
