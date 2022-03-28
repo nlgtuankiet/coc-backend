@@ -81,7 +81,7 @@ internal class CoinGeckoIdResolverImplTest {
             impl.populateCache(
                 mapOf(
                     "bitcoin" to 1,
-                    "ethereum" to 2,
+                    "ethereum" to 279,
                 )
             )
             assertEquals(1, impl.resolve("bitcoin"))
