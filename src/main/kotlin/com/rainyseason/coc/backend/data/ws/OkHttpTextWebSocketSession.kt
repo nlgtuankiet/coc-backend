@@ -22,9 +22,9 @@ import kotlin.coroutines.CoroutineContext
  * But support only text message
  */
 open class OkHttpTextWebSocketSession constructor(
-    webSocketFactory: WebSocket.Factory,
-    request: Request,
-    coroutineText: CoroutineContext,
+    val webSocketFactory: WebSocket.Factory,
+    val request: Request,
+    val coroutineText: CoroutineContext,
 ) : WebSocketListener() {
     internal val originResponse: CompletableDeferred<Response> = CompletableDeferred()
     private val scope = CoroutineScope(coroutineText)
@@ -40,7 +40,7 @@ open class OkHttpTextWebSocketSession constructor(
         get() = _closeReason
 
     @OptIn(ObsoleteCoroutinesApi::class)
-    val outgoing: SendChannel<String> = scope.actor(capacity = Channel.UNLIMITED) {
+    open val outgoing: SendChannel<String> = scope.actor(capacity = Channel.UNLIMITED) {
         val websocket: WebSocket = webSocketFactory.newWebSocket(request, selfListener.await())
         selfWebSocket.complete(websocket)
         for (message in channel) {
