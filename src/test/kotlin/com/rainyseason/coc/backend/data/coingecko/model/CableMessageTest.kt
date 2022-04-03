@@ -2,7 +2,7 @@ package com.rainyseason.coc.backend.data.coingecko.model
 
 import com.rainyseason.coc.backend.data.RawJsonAdapter
 import com.squareup.moshi.Moshi
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 internal class CableMessageTest {
@@ -62,6 +62,4 @@ internal class CableMessageTest {
         assertEquals(model, adapter.fromJson(json))
         assertEquals(json, adapter.toJson(model))
     }
-
-
 }

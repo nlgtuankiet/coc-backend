@@ -2,7 +2,7 @@ package com.rainyseason.coc.backend.data.coingecko.model
 
 import com.rainyseason.coc.backend.data.RawJsonAdapter
 import com.squareup.moshi.Moshi
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 internal class CableIdentifierTest {

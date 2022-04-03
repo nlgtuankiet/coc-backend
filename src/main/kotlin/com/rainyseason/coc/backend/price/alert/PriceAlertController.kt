@@ -5,8 +5,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class PriceAlertController @Inject constructor(
-) {
+class PriceAlertController @Inject constructor() {
     private val logger = getLogger<PriceAlertController>()
     fun start() {
         logger.debug("start")

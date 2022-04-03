@@ -12,7 +12,6 @@ import io.vertx.core.json.JsonObject
 import io.vertx.ext.auth.JWTOptions
 import io.vertx.ext.auth.User
 import io.vertx.ext.auth.jwt.JWTAuth
-import org.apache.logging.log4j.LogManager
 import javax.inject.Inject
 
 class FirebaseAuthProvider @Inject constructor(
