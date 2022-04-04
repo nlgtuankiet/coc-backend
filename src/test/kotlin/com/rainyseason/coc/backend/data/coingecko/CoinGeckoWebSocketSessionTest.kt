@@ -2,10 +2,13 @@ package com.rainyseason.coc.backend.data.coingecko
 
 import com.rainyseason.coc.backend.data.RawJsonAdapter
 import com.rainyseason.coc.backend.data.model.CoinId
+import com.rainyseason.coc.backend.data.ws.CloseReason
 import com.rainyseason.coc.backend.price.alert.PriceAlert
+import com.rainyseason.coc.backend.util.getLogger
 import com.squareup.moshi.Moshi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -186,6 +189,50 @@ internal class CoinGeckoWebSocketSessionTest {
                 session.subscribedCoin
             )
             assertTrue(outgoing.isEmpty)
+        }
+    }
+
+    @Test
+    fun `subscribe to CE channel success`() {
+        runBlocking {
+            val (session, webSocket, outgoing) = createTestObjects()
+            session.subscribeCEChannel()
+
+            session.awaitState {
+                messageListeners.size == 1
+            }
+            assertEquals(
+                listOf("""{"command":"subscribe","identifier":"{\"channel\":\"CEChannel\"}"}"""),
+                outgoing.take(1)
+            )
+            session.onMessage(
+                webSocket,
+                """{"identifier":"{\"channel\":\"CEChannel\"}","type":"confirm_subscription"}"""
+            )
+            session.awaitState {
+                messageListeners.size == 0
+            }
+            assertEquals(
+                session.subscribeCEChannelResult.await(),
+                Unit
+            )
+            assertTrue(outgoing.isEmpty)
+        }
+    }
+    @Test
+    fun `subscribe to CE channel fail`() {
+        runBlocking {
+            val (session, _, _) = createTestObjects()
+            session.subscribeCEChannel(0)
+            assertEquals(
+                CloseReason(
+                    CloseReason.Codes.VIOLATED_POLICY,
+                    "Subscribe to CEChannel failed"
+                ),
+                session.closeReason.await()
+            )
+            val exception = session.subscribeCEChannelResult.getCompletionExceptionOrNull()
+            assertTrue(exception is TimeoutCancellationException)
         }
     }
 
