@@ -1,15 +1,16 @@
 package com.rainyseason.coc.backend.data.coingecko
 
 import com.rainyseason.coc.backend.data.RawJsonAdapter
+import com.rainyseason.coc.backend.data.coingecko.model.CableCommand
+import com.rainyseason.coc.backend.data.coingecko.model.CableIdentifier
+import com.rainyseason.coc.backend.data.coingecko.model.CableMessage
 import com.rainyseason.coc.backend.data.model.CoinId
 import com.rainyseason.coc.backend.data.ws.CloseReason
 import com.rainyseason.coc.backend.price.alert.PriceAlert
-import com.rainyseason.coc.backend.util.getLogger
 import com.squareup.moshi.Moshi
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
@@ -18,12 +19,14 @@ import okhttp3.Request
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import org.junit.jupiter.api.Test
+import java.io.IOException
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
  * [CoinGeckoWebSocketSession]
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 internal class CoinGeckoWebSocketSessionTest {
     private object InMemoryIdResolver : CoinGeckoIdResolver {
         override suspend fun resolve(id: String): Int {
@@ -44,13 +47,15 @@ internal class CoinGeckoWebSocketSessionTest {
         val outgoing: Channel<String>,
     )
 
-    private fun createTestObjects(): TestObjects {
+    private fun createTestObjects(
+        coinGeckoIdResolver: CoinGeckoIdResolver? = null,
+    ): TestObjects {
         val client = OkHttpClient()
         val request = Request.Builder().url("https://google.com").build()
         val webSocket = client.newWebSocket(request, object : WebSocketListener() {})
         val session = CoinGeckoWebSocketSession(
             moshi = Moshi.Builder().add(RawJsonAdapter).build(),
-            coinGeckoIdResolver = InMemoryIdResolver,
+            coinGeckoIdResolver = coinGeckoIdResolver ?: InMemoryIdResolver,
             webSocketFactory = client,
         )
         val outgoing = Channel<String>(Channel.UNLIMITED)
@@ -64,9 +69,9 @@ internal class CoinGeckoWebSocketSessionTest {
 
     @Test
     fun `subscribe one coin correct`() {
-        runBlocking(Dispatchers.Default) {
+        runBlocking {
             val (session, webSocket, outgoing) = createTestObjects()
-
+            session.moveToAfterWelcomeState()
             session.subscribe(
                 listOf(
                     PriceAlert(CoinId("ethereum", "coingecko"), "usd")
@@ -102,7 +107,7 @@ internal class CoinGeckoWebSocketSessionTest {
     fun `subscribe with throttle`() {
         runBlocking {
             val (session, webSocket, outgoing) = createTestObjects()
-
+            session.moveToAfterWelcomeState()
             session.subscribe(
                 listOf(
                     PriceAlert(CoinId("ethereum", "coingecko"), "usd")
@@ -196,6 +201,7 @@ internal class CoinGeckoWebSocketSessionTest {
     fun `subscribe to CE channel success`() {
         runBlocking {
             val (session, webSocket, outgoing) = createTestObjects()
+            session.moveToAfterWelcomeState()
             session.subscribeCEChannel()
 
             session.awaitState {
@@ -212,28 +218,223 @@ internal class CoinGeckoWebSocketSessionTest {
             session.awaitState {
                 messageListeners.size == 0
             }
-            assertEquals(
-                session.subscribeCEChannelResult.await(),
-                Unit
-            )
             assertTrue(outgoing.isEmpty)
         }
     }
+
     @Test
     fun `subscribe to CE channel fail`() {
         runBlocking {
             val (session, _, _) = createTestObjects()
-            session.subscribeCEChannel(0)
+            session.apply {
+                operationTimeoutOverride = 1
+                operationTimeoutFactorOverride = 1.0
+                operationInitialDelayOverride = 1
+            }
+            session.subscribeCEChannel()
+
             assertEquals(
                 CloseReason(
                     CloseReason.Codes.VIOLATED_POLICY,
-                    "Subscribe to CEChannel failed"
+                    "Unable to subscribe CEChannel"
                 ),
                 session.closeReason.await()
             )
-            val exception = session.subscribeCEChannelResult.getCompletionExceptionOrNull()
-            assertTrue(exception is TimeoutCancellationException)
         }
+    }
+
+    @Test
+    fun `subscribe coin fail because unable to resolve id`() {
+        runBlocking {
+            val (session, webSocket, outgoing) = createTestObjects(
+                coinGeckoIdResolver = object : CoinGeckoIdResolver {
+                    override suspend fun resolve(id: String): Int {
+                        throw IOException("No network")
+                    }
+                }
+            )
+
+            session.apply {
+                operationTimeoutOverride = 100
+                operationTimeoutFactorOverride = 1.1
+                operationInitialDelayOverride = 100
+            }
+
+            session.subscribe(
+                listOf(
+                    PriceAlert(CoinId("ethereum", "coingecko"), "usd")
+                )
+            )
+
+            assertEquals(
+                CloseReason(
+                    CloseReason.Codes.VIOLATED_POLICY,
+                    "Unable to subscribe ${CoinId("ethereum", "coingecko")}"
+                ),
+                session.closeReason.await()
+            )
+
+            assertTrue(session.messageListeners.isEmpty())
+        }
+    }
+
+    @Test
+    fun `interact with session after close has no effect`() {
+        val (session, _, _) = createTestObjects()
+        session.closeSelf(1, "test")
+
+        assertTrue(session.pendingSubscribeRequest.isClosedForSend)
+        runBlocking {
+            assertEquals(
+                CloseReason(
+                    1,
+                    "test"
+                ),
+                session.closeReason.await()
+            )
+        }
+        val result = session.subscribe(emptyList())
+        assertTrue(result.isClosed)
+    }
+
+    @Test
+    fun `closeSelf close all resource`() {
+        val (session, _, _) = createTestObjects()
+        session.closeSelf(1, "")
+        assertTrue(session.pendingSubscribeRequest.isClosedForSend)
+        assertTrue(session.pendingSubscribeRequest.isClosedForReceive)
+        assertTrue(session.subscribeCoinsJobs.run { isCancelled || isCompleted })
+        assertTrue(session.processMessageJob.run { isCancelled || isCompleted })
+    }
+
+    @Test
+    fun `subscribe coin real world flow`() {
+        runBlocking {
+            val (session, webSocket, outgoing) = createTestObjects()
+            session.moveToAfterWelcomeState()
+            session.subscribeCEChannel()
+            session.awaitState {
+                messageListeners.size == 1
+            }
+            session.subscribe(
+                listOf(
+                    PriceAlert(CoinId("ethereum", "coingecko"), "usd")
+                )
+            )
+            session.awaitState {
+                messageListeners.size == 2
+            }
+            // assert outgoing
+            assertEquals(
+                listOf(
+                    """{"command":"subscribe","identifier":"{\"channel\":\"CEChannel\"}"}""",
+                    """{"command":"subscribe","identifier":"{\"channel\":\"PChannel\",\"m\":\"276\"}"}"""
+                ).toSet(),
+                outgoing.take(2).toSet()
+            )
+            session.onMessage(
+                webSocket,
+                """{"identifier":"{\"channel\":\"CEChannel\"}","type":"confirm_subscription"}"""
+            )
+            session.onMessage(
+                webSocket,
+                """{"identifier":"{\"channel\":\"PChannel\",\"m\":\"276\"}","type":"confirm_subscription"}"""
+            )
+
+            session.awaitState {
+                subscribedCoin.size == 1
+            }
+            assertEquals(setOf(CoinId("ethereum", "coingecko")), session.subscribedCoin)
+            assertTrue(session.messageListeners.isEmpty())
+            assertTrue(outgoing.isEmpty)
+        }
+    }
+
+    @Test
+    fun `wait for welcome success first, then send command`() {
+        runBlocking {
+            val (session, webSocket, outgoing) = createTestObjects()
+            session.onMessage(webSocket, """{"type":"welcome"}""")
+            val command = CableCommand(
+                command = "test_command",
+                identifier = CableIdentifier(channel = "test")
+            )
+            val cableMessage = CableMessage(type = "welcome")
+            session.welcomeMessage.complete(cableMessage)
+            session.sendCommand(command) // should return immediately
+            assertEquals(
+                listOf("""{"command":"test_command","identifier":"{\"channel\":\"test\"}"}"""),
+                outgoing.take(1).toList()
+            )
+            assertTrue(outgoing.isEmpty)
+        }
+    }
+
+    @Test
+    fun `send command should wait for welcome message first`() {
+        runBlocking {
+            val (session, webSocket, outgoing) = createTestObjects()
+            session.onMessage(webSocket, """{"type":"welcome"}""")
+            val command = CableCommand(
+                command = "test_command",
+                identifier = CableIdentifier(channel = "test")
+            )
+            // to fail this test case, try to comment out the wait for welcome message
+            launch { session.sendCommand(command) }
+            yield()
+            assertTrue(outgoing.isEmpty)
+            val cableMessage = CableMessage(type = "welcome")
+            session.welcomeMessage.complete(cableMessage)
+
+            assertEquals(
+                listOf("""{"command":"test_command","identifier":"{\"channel\":\"test\"}"}"""),
+                outgoing.take(1).toList()
+            )
+            assertTrue(outgoing.isEmpty)
+        }
+    }
+
+    @Test
+    fun `send command do nothing on failed to receive welcome message`() {
+        runBlocking {
+            val (session, webSocket, outgoing) = createTestObjects()
+            session.welcomeMessage.completeExceptionally(Exception())
+            val command = CableCommand(
+                command = "test_command",
+                identifier = CableIdentifier(channel = "test")
+            )
+            session.sendCommand(command)
+            yield()
+            assertTrue(outgoing.isEmpty)
+        }
+    }
+
+    @Test
+    fun `skip message when decode message failed`() {
+        val (session: CoinGeckoWebSocketSession, webSocket, outgoing) = createTestObjects()
+        var receiveMessage: CableMessage? = null
+
+        session.messageListeners.add(
+            object : CoinGeckoWebSocketSession.CableMessageListener() {
+                override fun invoke(message: CableMessage) {
+                    super.invoke(message)
+                    receiveMessage = message
+                    isActive = false
+                }
+            }
+        )
+        session.onMessage(webSocket, "invalid message")
+        session.onMessage(webSocket, """{"type":"a"}""")
+        runBlocking {
+            session.awaitState {
+                messageListeners.size == 0
+            }
+        }
+        assertEquals(CableMessage(type = "a"), receiveMessage)
+    }
+
+    private fun CoinGeckoWebSocketSession.moveToAfterWelcomeState() {
+        welcomeMessage.complete(CableMessage(type = "welcome"))
     }
 
     private suspend fun CoinGeckoWebSocketSession.awaitState(
