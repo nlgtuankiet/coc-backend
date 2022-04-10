@@ -39,13 +39,15 @@ data class CableMessage(
     @RawJson
     val identifier: CableIdentifier? = null,
     val type: String? = null,
-    val message: CablePercentMessage? = null,
+    val message: MixedMessage? = null,
 )
 
 @JsonClass(generateAdapter = true)
-data class CablePercentMessage(
+data class MixedMessage(
     @Json(name = "c")
-    val coinId: Int,
+    val coinId: Int? = null,
     @Json(name = "p")
-    val percent: Double
+    val percent: Double? = null,
+    @Json(name = "r")
+    val bitcoinPrice: Map<String, Double>? = null, // currency to price
 )
