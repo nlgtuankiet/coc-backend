@@ -1,7 +1,7 @@
 package com.rainyseason.coc.backend.data.ws
 
 import com.rainyseason.coc.backend.awaitExceptionOrNull
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.consumeAsFlow
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
@@ -20,11 +20,10 @@ class OkHttpTextWebSocketSessionTest {
     fun `connect - onFailure`() {
         val client = OkHttpClient()
         val request = Request.Builder().url("ws://google.com").build()
-        val coroutineContext = Job()
         val session = OkHttpTextWebSocketSession(
             webSocketFactory = client,
             request = request,
-            coroutineText = coroutineContext
+            dispatcher = Dispatchers.IO,
         )
 
         val webSocket = client.newWebSocket(request, object : WebSocketListener() {})
@@ -41,11 +40,10 @@ class OkHttpTextWebSocketSessionTest {
         val client = OkHttpClient()
         val request = Request.Builder().url("ws://google.com")
             .build()
-        val coroutineContext = Job()
         val session = OkHttpTextWebSocketSession(
             webSocketFactory = client,
             request = request,
-            coroutineText = coroutineContext
+            dispatcher = Dispatchers.IO,
         )
         val webSocket = client.newWebSocket(request, object : WebSocketListener() {})
         val response = Response.Builder()
@@ -71,11 +69,10 @@ class OkHttpTextWebSocketSessionTest {
         val client = OkHttpClient()
         val request = Request.Builder().url("ws://google.com")
             .build()
-        val coroutineContext = Job()
         val session = OkHttpTextWebSocketSession(
             webSocketFactory = client,
             request = request,
-            coroutineText = coroutineContext
+            dispatcher = Dispatchers.IO,
         )
 
         val webSocket = client.newWebSocket(request, object : WebSocketListener() {})
@@ -106,11 +103,10 @@ class OkHttpTextWebSocketSessionTest {
         val client = OkHttpClient()
         val request = Request.Builder().url("ws://google.com")
             .build()
-        val coroutineContext = Job()
         val session = OkHttpTextWebSocketSession(
             webSocketFactory = client,
             request = request,
-            coroutineText = coroutineContext
+            dispatcher = Dispatchers.IO,
         )
 
         val webSocket = client.newWebSocket(request, object : WebSocketListener() {})

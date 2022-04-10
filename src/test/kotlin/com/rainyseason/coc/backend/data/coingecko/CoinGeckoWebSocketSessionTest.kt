@@ -8,6 +8,7 @@ import com.rainyseason.coc.backend.data.model.CoinId
 import com.rainyseason.coc.backend.data.ws.CloseReason
 import com.rainyseason.coc.backend.price.alert.PriceAlert
 import com.squareup.moshi.Moshi
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
@@ -57,6 +58,7 @@ internal class CoinGeckoWebSocketSessionTest {
             moshi = Moshi.Builder().add(RawJsonAdapter).build(),
             coinGeckoIdResolver = coinGeckoIdResolver ?: InMemoryIdResolver,
             webSocketFactory = client,
+            dispatcher = Dispatchers.IO
         )
         val outgoing = Channel<String>(Channel.UNLIMITED)
         session.outgoingOverride = outgoing
@@ -246,7 +248,7 @@ internal class CoinGeckoWebSocketSessionTest {
     @Test
     fun `subscribe coin fail because unable to resolve id`() {
         runBlocking {
-            val (session, webSocket, outgoing) = createTestObjects(
+            val (session, _, _) = createTestObjects(
                 coinGeckoIdResolver = object : CoinGeckoIdResolver {
                     override suspend fun resolve(id: String): Int {
                         throw IOException("No network")
@@ -397,7 +399,7 @@ internal class CoinGeckoWebSocketSessionTest {
     @Test
     fun `send command do nothing on failed to receive welcome message`() {
         runBlocking {
-            val (session, webSocket, outgoing) = createTestObjects()
+            val (session, _, outgoing) = createTestObjects()
             session.welcomeMessage.completeExceptionally(Exception())
             val command = CableCommand(
                 command = "test_command",
@@ -411,7 +413,7 @@ internal class CoinGeckoWebSocketSessionTest {
 
     @Test
     fun `skip message when decode message failed`() {
-        val (session: CoinGeckoWebSocketSession, webSocket, outgoing) = createTestObjects()
+        val (session: CoinGeckoWebSocketSession, webSocket, _) = createTestObjects()
         var receiveMessage: CableMessage? = null
 
         session.messageListeners.add(

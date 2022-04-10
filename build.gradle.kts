@@ -56,6 +56,7 @@ dependencies {
     implementation("org.apache.logging.log4j:log4j-core")
 
     implementation("com.google.firebase:firebase-admin:8.1.0")
+    implementation("com.squareup.okhttp3:okhttp:4.9.3")
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-moshi:2.9.0")
     implementation("com.squareup.moshi:moshi:1.13.0")
@@ -93,12 +94,11 @@ tasks.withType<Test> {
 
 tasks.withType<KotlinCompile> {
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_1_8.toString()
+        jvmTarget = JavaVersion.VERSION_11.toString()
+        freeCompilerArgs = freeCompilerArgs + "-opt-in=kotlin.RequiresOptIn"
     }
 }
 
 tasks.test {
     useJUnitPlatform()
 }
-
-

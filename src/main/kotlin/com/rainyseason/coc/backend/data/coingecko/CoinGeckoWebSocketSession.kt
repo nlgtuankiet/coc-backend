@@ -10,12 +10,14 @@ import com.rainyseason.coc.backend.price.alert.PriceAlert
 import com.rainyseason.coc.backend.util.getLogger
 import com.rainyseason.coc.backend.util.notNull
 import com.squareup.moshi.Moshi
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedFactory
+import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ChannelResult
@@ -27,7 +29,6 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeout
 import okhttp3.Request
 import okhttp3.WebSocket
-import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.resume
 
 /**
@@ -35,22 +36,19 @@ import kotlin.coroutines.resume
  * TODO log non fatal exception to logging system
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-class CoinGeckoWebSocketSession constructor(
-    private val moshi: Moshi,
+class CoinGeckoWebSocketSession @AssistedInject constructor(
+    @Assisted webSocketFactory: WebSocket.Factory,
+    @Assisted dispatcher: CoroutineDispatcher,
+    moshi: Moshi,
     private val coinGeckoIdResolver: CoinGeckoIdResolver,
-    webSocketFactory: WebSocket.Factory,
-    request: Request = Request.Builder()
+) : OkHttpTextWebSocketSession(
+    webSocketFactory = webSocketFactory,
+    request = Request.Builder()
         .url("wss://cables.coingecko.com/cable")
         .header("Origin", "https://www.coingecko.com")
         .build(),
-    coroutineText: CoroutineContext = Dispatchers.IO.limitedParallelism(1),
-) : OkHttpTextWebSocketSession(
-    webSocketFactory = webSocketFactory,
-    request = request,
-    coroutineText = coroutineText
+    dispatcher = dispatcher
 ) {
-    private val serialDispatcher = Dispatchers.IO.limitedParallelism(1)
-    internal val scope = CoroutineScope(serialDispatcher + SupervisorJob())
     internal val welcomeMessage = CompletableDeferred<CableMessage>()
     private val logger = getLogger<CoinGeckoWebSocketSession>()
     internal val subscribedCoin = mutableSetOf<CoinId>()
@@ -316,5 +314,13 @@ class CoinGeckoWebSocketSession constructor(
         private val WELCOME_MESSAGE = CableMessage(
             type = "welcome"
         )
+    }
+
+    @AssistedFactory
+    interface Factory {
+        fun create(
+            webSocketFactory: WebSocket.Factory,
+            dispatcher: CoroutineDispatcher,
+        ): CoinGeckoWebSocketSession
     }
 }

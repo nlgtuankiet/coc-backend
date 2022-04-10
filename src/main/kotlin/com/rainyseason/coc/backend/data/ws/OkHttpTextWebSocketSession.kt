@@ -2,9 +2,12 @@ package com.rainyseason.coc.backend.data.ws
 
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.ObsoleteCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.SendChannel
@@ -14,20 +17,22 @@ import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import okio.ByteString
-import kotlin.coroutines.CoroutineContext
 
 /**
  * Based on
  * [io.ktor.client.engine.okhttp.OkHttpWebsocketSession]
  * But support only text message
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 open class OkHttpTextWebSocketSession constructor(
     val webSocketFactory: WebSocket.Factory,
     val request: Request,
-    val coroutineText: CoroutineContext,
+    val dispatcher: CoroutineDispatcher,
 ) : WebSocketListener() {
     internal val originResponse: CompletableDeferred<Response> = CompletableDeferred()
-    private val scope = CoroutineScope(coroutineText)
+    internal val scope = CoroutineScope(
+        dispatcher.limitedParallelism(1) + SupervisorJob()
+    )
     private val selfListener = CompletableDeferred<WebSocketListener>()
     private val selfWebSocket = CompletableDeferred<WebSocket>()
     private val _incoming = Channel<String>(Channel.UNLIMITED)
