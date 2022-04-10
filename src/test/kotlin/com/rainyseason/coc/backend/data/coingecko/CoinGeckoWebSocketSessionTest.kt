@@ -6,7 +6,6 @@ import com.rainyseason.coc.backend.data.coingecko.model.CableIdentifier
 import com.rainyseason.coc.backend.data.coingecko.model.CableMessage
 import com.rainyseason.coc.backend.data.model.CoinId
 import com.rainyseason.coc.backend.data.ws.CloseReason
-import com.rainyseason.coc.backend.price.alert.PriceAlert
 import com.squareup.moshi.Moshi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -58,7 +57,8 @@ internal class CoinGeckoWebSocketSessionTest {
             moshi = Moshi.Builder().add(RawJsonAdapter).build(),
             coinGeckoIdResolver = coinGeckoIdResolver ?: InMemoryIdResolver,
             webSocketFactory = client,
-            dispatcher = Dispatchers.IO
+            dispatcher = Dispatchers.IO,
+            cableMessages = Channel(Channel.UNLIMITED)
         )
         val outgoing = Channel<String>(Channel.UNLIMITED)
         session.outgoingOverride = outgoing
@@ -75,8 +75,8 @@ internal class CoinGeckoWebSocketSessionTest {
             val (session, webSocket, outgoing) = createTestObjects()
             session.moveToAfterWelcomeState()
             session.subscribe(
-                listOf(
-                    PriceAlert(CoinId("ethereum", "coingecko"), "usd")
+                setOf(
+                    CoinId("ethereum", "coingecko")
                 )
             )
 
@@ -111,8 +111,8 @@ internal class CoinGeckoWebSocketSessionTest {
             val (session, webSocket, outgoing) = createTestObjects()
             session.moveToAfterWelcomeState()
             session.subscribe(
-                listOf(
-                    PriceAlert(CoinId("ethereum", "coingecko"), "usd")
+                setOf(
+                    CoinId("ethereum", "coingecko")
                 )
             )
 
@@ -131,22 +131,20 @@ internal class CoinGeckoWebSocketSessionTest {
             // at this point first subscribe job is still not finish
             // enqueue more subscribe request to test throttle effect
             session.subscribe(
-                listOf(
-                    PriceAlert(CoinId("doge", "coingecko"), "usd"),
+                setOf(CoinId("doge", "coingecko"))
+            )
+            session.subscribe(
+                setOf(
+                    CoinId("doge", "coingecko"),
+                    CoinId("doge1", "coingecko")
                 )
             )
             session.subscribe(
-                listOf(
-                    PriceAlert(CoinId("doge", "coingecko"), "usd"),
-                    PriceAlert(CoinId("doge1", "coingecko"), "usd"),
-                )
-            )
-            session.subscribe(
-                listOf(
-                    PriceAlert(CoinId("doge", "coingecko"), "usd"),
-                    PriceAlert(CoinId("doge1", "coingecko"), "usd"),
-                    PriceAlert(CoinId("doge1", "coingecko"), "vnd"),
-                    PriceAlert(CoinId("doge2", "coingecko"), "vnd"),
+                setOf(
+                    CoinId("doge", "coingecko"),
+                    CoinId("doge1", "coingecko"),
+                    CoinId("doge1", "coingecko"),
+                    CoinId("doge2", "coingecko"),
                 )
             )
 
@@ -263,8 +261,8 @@ internal class CoinGeckoWebSocketSessionTest {
             }
 
             session.subscribe(
-                listOf(
-                    PriceAlert(CoinId("ethereum", "coingecko"), "usd")
+                setOf(
+                    CoinId("ethereum", "coingecko")
                 )
             )
 
@@ -295,7 +293,7 @@ internal class CoinGeckoWebSocketSessionTest {
                 session.closeReason.await()
             )
         }
-        val result = session.subscribe(emptyList())
+        val result = session.subscribe(emptySet())
         assertTrue(result.isClosed)
     }
 
@@ -319,8 +317,8 @@ internal class CoinGeckoWebSocketSessionTest {
                 messageListeners.size == 1
             }
             session.subscribe(
-                listOf(
-                    PriceAlert(CoinId("ethereum", "coingecko"), "usd")
+                setOf(
+                    CoinId("ethereum", "coingecko")
                 )
             )
             session.awaitState {
@@ -417,7 +415,7 @@ internal class CoinGeckoWebSocketSessionTest {
         var receiveMessage: CableMessage? = null
 
         session.messageListeners.add(
-            object : CoinGeckoWebSocketSession.CableMessageListener() {
+            object : CableMessageListener() {
                 override fun invoke(message: CableMessage) {
                     super.invoke(message)
                     receiveMessage = message

@@ -34,11 +34,13 @@ import kotlin.coroutines.resume
 /**
  * Wait for welcome message before sending any command
  * TODO log non fatal exception to logging system
+ * TODO add test send cable message back to cableMessages
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class CoinGeckoWebSocketSession @AssistedInject constructor(
     @Assisted webSocketFactory: WebSocket.Factory,
     @Assisted dispatcher: CoroutineDispatcher,
+    @Assisted cableMessages: SendChannel<CableMessage>,
     moshi: Moshi,
     private val coinGeckoIdResolver: CoinGeckoIdResolver,
 ) : OkHttpTextWebSocketSession(
@@ -51,22 +53,14 @@ class CoinGeckoWebSocketSession @AssistedInject constructor(
 ) {
     internal val welcomeMessage = CompletableDeferred<CableMessage>()
     private val logger = getLogger<CoinGeckoWebSocketSession>()
-    internal val subscribedCoin = mutableSetOf<CoinId>()
-    internal val messageListeners = mutableSetOf<CableMessageListener>()
-    internal val pendingSubscribeRequest = Channel<List<PriceAlert>>(Channel.CONFLATED)
+    internal val subscribedCoin = HashSet<CoinId>()
+    internal val messageListeners = HashSet<CableMessageListener>()
+    internal val pendingSubscribeRequest = Channel<Set<CoinId>>(Channel.CONFLATED)
     private val messageAdapter = moshi.adapter(CableMessage::class.java)
     private val commandAdapter = moshi.adapter(CableCommand::class.java)
     internal var operationTimeoutOverride: Long? = null
     internal var operationTimeoutFactorOverride: Double? = null
     internal var operationInitialDelayOverride: Long? = null
-
-    abstract class CableMessageListener : Function1<CableMessage, Unit> {
-        @Volatile
-        internal var isActive = true
-
-        override fun invoke(message: CableMessage) {
-        }
-    }
 
     internal val subscribeCoinsJobs = scope.launch {
         logger.debug("process coins job")
@@ -149,15 +143,14 @@ class CoinGeckoWebSocketSession @AssistedInject constructor(
         outgoing.trySend(json)
     }
 
-    fun subscribe(coins: List<PriceAlert>): ChannelResult<Unit> {
+    fun subscribe(coins: Set<CoinId>): ChannelResult<Unit> {
         logger.debug("subscribe $coins")
         return pendingSubscribeRequest.trySend(coins)
     }
 
-    internal suspend fun subscribeInternal(coins: List<PriceAlert>) {
-        val set = coins.map { it.coinId }.toSet()
-        val toSubscribe = set.filter { it !in subscribedCoin }
-        val toUnsubscribe = subscribedCoin.filter { it !in set }
+    internal suspend fun subscribeInternal(coins: Set<CoinId>) {
+        val toSubscribe = coins.filter { it !in subscribedCoin }
+        val toUnsubscribe = subscribedCoin.filter { it !in coins }
         coroutineScope {
             toSubscribe.forEach {
                 operation("subscribe $it") {
@@ -171,7 +164,7 @@ class CoinGeckoWebSocketSession @AssistedInject constructor(
             }
         }
         subscribedCoin.clear()
-        subscribedCoin.addAll(set)
+        subscribedCoin.addAll(coins)
         logger.debug("subscribe $coins done")
     }
 
@@ -321,6 +314,7 @@ class CoinGeckoWebSocketSession @AssistedInject constructor(
         fun create(
             webSocketFactory: WebSocket.Factory,
             dispatcher: CoroutineDispatcher,
+            cableMessages: SendChannel<CableMessage>,
         ): CoinGeckoWebSocketSession
     }
 }
