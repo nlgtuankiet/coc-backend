@@ -35,6 +35,7 @@ import kotlin.coroutines.resume
  * Wait for welcome message before sending any command
  * TODO log non fatal exception to logging system
  * TODO add test send cable message back to cableMessages
+ * TODO filter out bitcoin because it always subscribed
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class CoinGeckoWebSocketSession @AssistedInject constructor(
