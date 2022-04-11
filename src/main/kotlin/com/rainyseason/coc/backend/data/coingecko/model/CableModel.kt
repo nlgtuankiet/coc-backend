@@ -2,7 +2,13 @@ package com.rainyseason.coc.backend.data.coingecko.model
 
 import com.rainyseason.coc.backend.data.RawJson
 import com.squareup.moshi.Json
+import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.JsonClass
+import com.squareup.moshi.JsonReader
+import com.squareup.moshi.JsonWriter
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.Types
+import java.lang.reflect.Type
 
 /**
  * {"command":"subscribe","identifier":"{\"channel\":\"CEChannel\"}"}
@@ -39,15 +45,65 @@ data class CableMessage(
     @RawJson
     val identifier: CableIdentifier? = null,
     val type: String? = null,
-    val message: MixedMessage? = null,
+    val message: ComplexMessage? = null,
 )
 
+sealed class ComplexMessage
+
 @JsonClass(generateAdapter = true)
-data class MixedMessage(
+data class PriceMessage(
     @Json(name = "c")
     val coinId: Int? = null,
     @Json(name = "p")
     val percent: Double? = null,
     @Json(name = "r")
     val bitcoinPrice: Map<String, Double>? = null, // currency to price
-)
+) : ComplexMessage()
+
+data class LongMessage(val value: Long) : ComplexMessage()
+
+class ComplexMessageJsonAdapter(
+    moshi: Moshi,
+) : JsonAdapter<ComplexMessage>() {
+    private val mixedMessageAdapter = moshi.adapter(PriceMessage::class.java)
+    override fun fromJson(reader: JsonReader): ComplexMessage? {
+        return when (val token = reader.peek()) {
+            JsonReader.Token.NULL -> {
+                reader.nextNull()
+            }
+            JsonReader.Token.NUMBER -> {
+                LongMessage(reader.nextLong())
+            }
+            else -> {
+                mixedMessageAdapter.fromJson(reader)
+            }
+        }
+    }
+
+    override fun toJson(writer: JsonWriter, value: ComplexMessage?) {
+        when (value) {
+            null -> {
+                writer.nullValue()
+            }
+            is LongMessage -> {
+                writer.jsonValue(value.value)
+            }
+            is PriceMessage -> {
+                mixedMessageAdapter.toJson(writer, value)
+            }
+        }
+    }
+
+    companion object : Factory {
+        override fun create(
+            type: Type,
+            annotations: MutableSet<out Annotation>,
+            moshi: Moshi,
+        ): JsonAdapter<*>? {
+            if (Types.getRawType(type) != ComplexMessage::class.java) {
+                return null
+            }
+            return ComplexMessageJsonAdapter(moshi)
+        }
+    }
+}

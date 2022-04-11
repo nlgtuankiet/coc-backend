@@ -10,6 +10,7 @@ import com.rainyseason.coc.backend.BuildConfig
 import com.rainyseason.coc.backend.FirebaseAuthProvider
 import com.rainyseason.coc.backend.data.RawJsonAdapter
 import com.rainyseason.coc.backend.data.coingecko.CoinGeckoService
+import com.rainyseason.coc.backend.data.coingecko.model.ComplexMessageJsonAdapter
 import com.rainyseason.coc.backend.data.http.UrlInterceptor
 import com.rainyseason.coc.backend.util.getLogger
 import com.squareup.moshi.Moshi
@@ -44,6 +45,7 @@ object AppModule {
     fun moshi(): Moshi {
         return Moshi.Builder()
             .add(RawJsonAdapter)
+            .add(ComplexMessageJsonAdapter)
             .build()
     }
 
