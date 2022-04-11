@@ -169,8 +169,11 @@ class CoinGeckoWebSocketSession @AssistedInject constructor(
         logger.debug("subscribe $coins done")
     }
 
-    private suspend fun subscribe(coin: CoinId) {
+    internal suspend fun subscribe(coin: CoinId): Boolean {
         logger.debug("subscribe coin: $coin")
+        if (coin == BITCOIN_ID) {
+            return false
+        }
         val coinId = coinGeckoIdResolver.resolve(coin.id)
         val identifier = CableIdentifier(
             channel = "PChannel",
@@ -185,6 +188,7 @@ class CoinGeckoWebSocketSession @AssistedInject constructor(
             type = "confirm_subscription"
         )
         sendAndReceive(command, expectedMessage)
+        return true
     }
 
     private suspend fun sendAndReceive(
@@ -210,8 +214,11 @@ class CoinGeckoWebSocketSession @AssistedInject constructor(
         }
     }
 
-    private suspend fun unsubscribe(coin: CoinId) {
+    internal suspend fun unsubscribe(coin: CoinId): Boolean {
         logger.debug("unsubscribe $coin")
+        if (coin == BITCOIN_ID) {
+            return false
+        }
         val coinId = coinGeckoIdResolver.resolve(coin.id)
         val command = CableCommand(
             command = "unsubscribe",
@@ -221,6 +228,7 @@ class CoinGeckoWebSocketSession @AssistedInject constructor(
             )
         )
         sendCommand(command)
+        return true
     }
 
     override fun start() {
@@ -308,6 +316,8 @@ class CoinGeckoWebSocketSession @AssistedInject constructor(
         private val WELCOME_MESSAGE = CableMessage(
             type = "welcome"
         )
+
+        private val BITCOIN_ID = CoinId("bitcoin", "coingecko")
     }
 
     @AssistedFactory

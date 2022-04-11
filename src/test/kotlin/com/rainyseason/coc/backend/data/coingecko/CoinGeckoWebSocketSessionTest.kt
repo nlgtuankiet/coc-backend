@@ -13,6 +13,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.yield
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -431,6 +432,22 @@ internal class CoinGeckoWebSocketSessionTest {
             }
         }
         assertEquals(CableMessage(type = "a"), receiveMessage)
+    }
+
+    @Test
+    fun `subscribe and unsubscribe to bitcoin does nothing`() {
+        val (session: CoinGeckoWebSocketSession, webSocket, _) = createTestObjects()
+        runBlocking {
+            val subscribeResult = withTimeoutOrNull(300) {
+                session.subscribe(CoinId("bitcoin", "coingecko"))
+            }
+            assertEquals(false, subscribeResult)
+
+            val unSubscribeResult = withTimeoutOrNull(300) {
+                session.unsubscribe(CoinId("bitcoin", "coingecko"))
+            }
+            assertEquals(false, unSubscribeResult)
+        }
     }
 
     private fun CoinGeckoWebSocketSession.moveToAfterWelcomeState() {
