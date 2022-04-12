@@ -1,17 +1,18 @@
 package com.rainyseason.coc.backend.data.coingecko
 
+import com.rainyseason.coc.backend.awaitState
 import com.rainyseason.coc.backend.data.coingecko.model.CableCommand
 import com.rainyseason.coc.backend.data.coingecko.model.CableIdentifier
 import com.rainyseason.coc.backend.data.coingecko.model.CableMessage
 import com.rainyseason.coc.backend.data.model.CoinId
 import com.rainyseason.coc.backend.data.ws.CloseReason
 import com.rainyseason.coc.backend.di.AppModule
+import com.rainyseason.coc.backend.take
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.yield
 import okhttp3.OkHttpClient
@@ -24,11 +25,11 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * [CoinGeckoWebSocketSession]
+ * [CoinGeckoWebSocketSessionImpl]
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-internal class CoinGeckoWebSocketSessionTest {
-    private object InMemoryIdResolver : CoinGeckoIdResolver {
+internal class CoinGeckoWebSocketSessionImplTest {
+    internal object InMemoryIdResolver : CoinGeckoIdResolver {
         override suspend fun resolve(id: String): Int {
             return when (id) {
                 "bitcoin" -> 1
@@ -42,7 +43,7 @@ internal class CoinGeckoWebSocketSessionTest {
     }
 
     data class TestObjects(
-        val session: CoinGeckoWebSocketSession,
+        val session: CoinGeckoWebSocketSessionImpl,
         val webSocket: WebSocket,
         val outgoing: Channel<String>,
     )
@@ -54,7 +55,7 @@ internal class CoinGeckoWebSocketSessionTest {
         val client = OkHttpClient()
         val request = Request.Builder().url("https://google.com").build()
         val webSocket = client.newWebSocket(request, object : WebSocketListener() {})
-        val session = CoinGeckoWebSocketSession(
+        val session = CoinGeckoWebSocketSessionImpl(
             moshi = AppModule.moshi(),
             coinGeckoIdResolver = coinGeckoIdResolver ?: InMemoryIdResolver,
             webSocketFactory = client,
@@ -450,26 +451,7 @@ internal class CoinGeckoWebSocketSessionTest {
         }
     }
 
-    private fun CoinGeckoWebSocketSession.moveToAfterWelcomeState() {
+    private fun CoinGeckoWebSocketSessionImpl.moveToAfterWelcomeState() {
         welcomeMessage.complete(CableMessage(type = "welcome"))
-    }
-
-    private suspend fun CoinGeckoWebSocketSession.awaitState(
-        block: CoinGeckoWebSocketSession.() -> Boolean,
-    ) {
-        withTimeout(5000) {
-            while (!block.invoke(this@awaitState)) {
-                yield()
-            }
-        }
-    }
-
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private suspend fun <T> Channel<T>.take(limit: Int): List<T> {
-        val result = mutableListOf<T>()
-        while (result.size != limit) {
-            result.add(this.receive())
-        }
-        return result
     }
 }

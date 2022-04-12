@@ -4,6 +4,8 @@ import com.rainyseason.coc.backend.data.coingecko.CoinGeckoIdResolver
 import com.rainyseason.coc.backend.data.coingecko.CoinGeckoIdResolverImpl
 import com.rainyseason.coc.backend.data.coingecko.CoinGeckoLargeImageProvider
 import com.rainyseason.coc.backend.data.coingecko.CoinGeckoService
+import com.rainyseason.coc.backend.data.coingecko.CoinGeckoWebSocketSession
+import com.rainyseason.coc.backend.data.coingecko.CoinGeckoWebSocketSessionImpl
 import dagger.Binds
 import dagger.Module
 
@@ -14,4 +16,9 @@ interface AppBinding {
 
     @Binds
     fun coinGeckoIdResolver(impl: CoinGeckoIdResolverImpl): CoinGeckoIdResolver
+
+    @Binds
+    fun coinGeckoWebSocketSessionFactory(
+        impl: CoinGeckoWebSocketSessionImpl.Factory,
+    ): CoinGeckoWebSocketSession.Factory
 }

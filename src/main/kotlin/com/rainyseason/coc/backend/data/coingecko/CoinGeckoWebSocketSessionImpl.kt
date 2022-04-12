@@ -16,6 +16,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.channels.Channel
@@ -30,13 +31,27 @@ import okhttp3.Request
 import okhttp3.WebSocket
 import kotlin.coroutines.resume
 
+interface CoinGeckoWebSocketSession {
+    fun start()
+    val closeReason: Deferred<CloseReason>
+    fun subscribe(coins: Set<CoinId>): ChannelResult<Unit>
+
+    interface Factory {
+        fun create(
+            webSocketFactory: WebSocket.Factory,
+            dispatcher: CoroutineDispatcher,
+            cableMessages: SendChannel<CableMessage>,
+        ): CoinGeckoWebSocketSession
+    }
+}
+
 /**
  * Wait for welcome message before sending any command
  * TODO log non fatal exception to logging system
  * TODO add test send cable message back to cableMessages
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-class CoinGeckoWebSocketSession @AssistedInject constructor(
+class CoinGeckoWebSocketSessionImpl @AssistedInject constructor(
     @Assisted webSocketFactory: WebSocket.Factory,
     @Assisted dispatcher: CoroutineDispatcher,
     @Assisted outMessages: SendChannel<CableMessage>,
@@ -49,9 +64,10 @@ class CoinGeckoWebSocketSession @AssistedInject constructor(
         .header("Origin", "https://www.coingecko.com")
         .build(),
     dispatcher = dispatcher
-) {
+),
+    CoinGeckoWebSocketSession {
     internal val welcomeMessage = CompletableDeferred<CableMessage>()
-    private val logger = getLogger<CoinGeckoWebSocketSession>()
+    private val logger = getLogger<CoinGeckoWebSocketSessionImpl>()
     internal val subscribedCoin = HashSet<CoinId>()
     internal val messageListeners = HashSet<CableMessageListener>()
     internal val pendingSubscribeRequest = Channel<Set<CoinId>>(Channel.CONFLATED)
@@ -82,10 +98,9 @@ class CoinGeckoWebSocketSession @AssistedInject constructor(
             messageListeners.forEach { listener ->
                 if (listener.isActive) {
                     listener.invoke(cableMessage)
-                    if (!listener.isActive) {
-                        toRemove.add(listener)
-                    }
-                } else {
+                }
+                // listener state might changed after invoke
+                if (!listener.isActive) {
                     toRemove.add(listener)
                 }
             }
@@ -142,7 +157,7 @@ class CoinGeckoWebSocketSession @AssistedInject constructor(
         outgoing.trySend(json)
     }
 
-    fun subscribe(coins: Set<CoinId>): ChannelResult<Unit> {
+    override fun subscribe(coins: Set<CoinId>): ChannelResult<Unit> {
         logger.debug("subscribe $coins")
         return pendingSubscribeRequest.trySend(coins)
     }
@@ -319,11 +334,11 @@ class CoinGeckoWebSocketSession @AssistedInject constructor(
     }
 
     @AssistedFactory
-    interface Factory {
-        fun create(
+    interface Factory : CoinGeckoWebSocketSession.Factory {
+        override fun create(
             webSocketFactory: WebSocket.Factory,
             dispatcher: CoroutineDispatcher,
             cableMessages: SendChannel<CableMessage>,
-        ): CoinGeckoWebSocketSession
+        ): CoinGeckoWebSocketSessionImpl
     }
 }

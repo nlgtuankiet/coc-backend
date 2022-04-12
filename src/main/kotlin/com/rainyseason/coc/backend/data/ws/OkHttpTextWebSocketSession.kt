@@ -36,12 +36,12 @@ open class OkHttpTextWebSocketSession constructor(
     private val selfListener = CompletableDeferred<WebSocketListener>()
     private val selfWebSocket = CompletableDeferred<WebSocket>()
     private val _incoming = Channel<String>(Channel.UNLIMITED)
-    private val _closeReason = CompletableDeferred<CloseReason?>()
+    private val _closeReason = CompletableDeferred<CloseReason>()
 
     val incoming: ReceiveChannel<String>
         get() = _incoming
 
-    val closeReason: Deferred<CloseReason?>
+    val closeReason: Deferred<CloseReason>
         get() = _closeReason
 
     @OptIn(ObsoleteCoroutinesApi::class)
