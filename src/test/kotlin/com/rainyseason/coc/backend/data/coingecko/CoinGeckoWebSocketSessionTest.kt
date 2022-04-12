@@ -1,12 +1,11 @@
 package com.rainyseason.coc.backend.data.coingecko
 
-import com.rainyseason.coc.backend.data.RawJsonAdapter
 import com.rainyseason.coc.backend.data.coingecko.model.CableCommand
 import com.rainyseason.coc.backend.data.coingecko.model.CableIdentifier
 import com.rainyseason.coc.backend.data.coingecko.model.CableMessage
 import com.rainyseason.coc.backend.data.model.CoinId
 import com.rainyseason.coc.backend.data.ws.CloseReason
-import com.squareup.moshi.Moshi
+import com.rainyseason.coc.backend.di.AppModule
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
@@ -50,16 +49,17 @@ internal class CoinGeckoWebSocketSessionTest {
 
     private fun createTestObjects(
         coinGeckoIdResolver: CoinGeckoIdResolver? = null,
+        outMessages: Channel<CableMessage> = Channel(Channel.UNLIMITED),
     ): TestObjects {
         val client = OkHttpClient()
         val request = Request.Builder().url("https://google.com").build()
         val webSocket = client.newWebSocket(request, object : WebSocketListener() {})
         val session = CoinGeckoWebSocketSession(
-            moshi = Moshi.Builder().add(RawJsonAdapter).build(),
+            moshi = AppModule.moshi(),
             coinGeckoIdResolver = coinGeckoIdResolver ?: InMemoryIdResolver,
             webSocketFactory = client,
             dispatcher = Dispatchers.IO,
-            cableMessages = Channel(Channel.UNLIMITED)
+            outMessages = outMessages
         )
         val outgoing = Channel<String>(Channel.UNLIMITED)
         session.outgoingOverride = outgoing
@@ -436,7 +436,7 @@ internal class CoinGeckoWebSocketSessionTest {
 
     @Test
     fun `subscribe and unsubscribe to bitcoin does nothing`() {
-        val (session: CoinGeckoWebSocketSession, webSocket, _) = createTestObjects()
+        val (session: CoinGeckoWebSocketSession, _, _) = createTestObjects()
         runBlocking {
             val subscribeResult = withTimeoutOrNull(300) {
                 session.subscribe(CoinId("bitcoin", "coingecko"))
