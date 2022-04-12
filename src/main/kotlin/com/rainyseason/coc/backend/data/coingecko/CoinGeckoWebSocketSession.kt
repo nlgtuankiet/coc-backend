@@ -6,7 +6,6 @@ import com.rainyseason.coc.backend.data.coingecko.model.CableMessage
 import com.rainyseason.coc.backend.data.model.CoinId
 import com.rainyseason.coc.backend.data.ws.CloseReason
 import com.rainyseason.coc.backend.data.ws.OkHttpTextWebSocketSession
-import com.rainyseason.coc.backend.price.alert.PriceAlert
 import com.rainyseason.coc.backend.util.getLogger
 import com.rainyseason.coc.backend.util.notNull
 import com.squareup.moshi.Moshi
@@ -35,13 +34,12 @@ import kotlin.coroutines.resume
  * Wait for welcome message before sending any command
  * TODO log non fatal exception to logging system
  * TODO add test send cable message back to cableMessages
- * TODO filter out bitcoin because it always subscribed
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class CoinGeckoWebSocketSession @AssistedInject constructor(
     @Assisted webSocketFactory: WebSocket.Factory,
     @Assisted dispatcher: CoroutineDispatcher,
-    @Assisted cableMessages: SendChannel<CableMessage>,
+    @Assisted outMessages: SendChannel<CableMessage>,
     moshi: Moshi,
     private val coinGeckoIdResolver: CoinGeckoIdResolver,
 ) : OkHttpTextWebSocketSession(
