@@ -1,6 +1,14 @@
 #!/bin/bash
 set -e
 
+### Build and invoke helm upgrade command
+### 
+### Flags:
+### -e: set enviroment, valid values are dev/prod, default to dev  
+### -d: do nothing, just print the command for debug only
+### -i: when set, invoke helm "upgrade" command with -i option
+
+
 ### Enviroment
 env="dev"
 initialize="false"
