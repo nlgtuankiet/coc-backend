@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: coc-service
+spec:
+  selector:
+    app: coc-backend
+  ports:
+    - name: app-test
+      port: 81
+      targetPort: 81
+    - name: app-main
+      port: 80
+      targetPort: 80
+  type: ClusterIP

@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: coc-grafana
+spec:
+  tls:
+    - secretName: coc-certificate
+      hosts:
+      - {{ .Values.host }}
+  ingressClassName: nginx
+  rules:
+    - host: {{ .Values.host }}
+      http:
+        paths:
+          - path: /grafana
+            pathType: Prefix
+            backend:
+              service:
+                name: coc-grafana
+                port:
+                  number: 80

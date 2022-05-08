@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: coc-backend
+  labels:
+    app: coc-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: coc-backend
+  template:
+    metadata:
+      labels:
+        app: coc-backend
+    spec:
+      volumes:
+      - name: firebase-volume
+        secret:
+          secretName: {{ .Values.firebase_service_account_secret_name }}
+      containers:
+        - name: test-app
+          image: nlgtuankiet/cjbackend:1.0.4
+          ports:
+            - containerPort: 81
+          env:
+            - name: PORT
+              value: "81"
+        - name: main-app
+          image: nlgtuankiet/coc-backend:1.0.3
+          ports:
+            - containerPort: 80
+          env:
+            - name: PORT
+              value: "80"
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: "/gcloud/{{ .Values.firebase_service_account_file_name }}"
+          volumeMounts:
+          - name: firebase-volume
+            readOnly: true
+            mountPath: "/gcloud"

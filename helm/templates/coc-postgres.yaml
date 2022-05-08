@@ -1,0 +1,73 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-secret
+data:
+  password: {{ .Values.postgres_password_base64 }}
+  postgresql.conf: {{ .Values.postgres_config_base64 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: coc-postgres
+  labels:
+    app: coc-postgres
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: coc-postgres
+  template:
+    metadata:
+      labels:
+        app: coc-postgres
+    spec:
+      volumes:
+      - name: data-dir
+        hostPath:
+          path: /usr/local/postgres/prod/14/data
+          type: DirectoryOrCreate
+      - name: log-dir
+        hostPath:
+          path: /mega/postgres/test-prod/14/log
+      - name: secret-dir
+        secret:
+          secretName: postgres-secret
+      containers:
+        - name: postgres
+          image: postgres:14.2
+          ports:
+          - containerPort: 5432
+          volumeMounts:
+          - mountPath: /var/lib/postgresql/data
+            name: data-dir
+          - mountPath: /var/lib/postgresql/log
+            name: log-dir
+          - mountPath: "/var/lib/postgresql/secret"
+            name: secret-dir
+            readOnly: true
+          env:
+            - name: POSTGRES_PASSWORD_FILE
+              value: "/var/lib/postgresql/secret/password"
+          args:
+          - -c
+          - config_file=/var/lib/postgresql/secret/postgresql.conf
+          - -c
+          - data_directory=/var/lib/postgresql/data
+          - -c
+          - log_directory=/var/lib/postgresql/log
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: coc-postgres
+spec:
+  selector:
+    app: coc-postgres
+  ports:
+    - name: default
+      port: 5432
+      targetPort: 5432
+  type: ClusterIP

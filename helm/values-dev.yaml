@@ -1,0 +1,14 @@
+ingress-nginx:
+  controller:
+    service:
+      loadBalancerIP: 168.138.76.38
+host: &host dev.coinomegacoin.com
+# use staging server for testing only
+# issuer:
+#   server: https://acme-staging-v02.api.letsencrypt.org/directory
+kube-prometheus-stack:
+  grafana:
+    grafana.ini:
+      server:
+        domain: &host
+        root_url: https://dev.coinomegacoin.com/grafana/

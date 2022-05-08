@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: coc-ubuntu
+  labels:
+    app: coc-ubuntu
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: coc-ubuntu
+  template:
+    metadata:
+      labels:
+        app: coc-ubuntu
+    spec:
+      containers:
+      - name: ubuntu
+        image: ubuntu:22.04
+        ports:
+        - containerPort: 5432
+        command: ["/bin/bash", "-c", "--"]
+        args: ["while true; do sleep 9999; done;"]

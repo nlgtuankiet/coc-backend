@@ -1,0 +1,5 @@
+ingress-nginx:
+  controller:
+    service:
+      loadBalancerIP: 20.124.43.196
+host: dev-azure.coinomegacoin.com

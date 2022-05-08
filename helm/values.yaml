@@ -1,0 +1,27 @@
+firebase_service_account_secret_name: coc-firebase-service-account
+firebase_service_account_file_name: firebase-service-account.json
+firebase_service_account_file_base64: override-this
+postgres_password_base64: override-this
+postgres_config_base64: override-this
+ingress-nginx:
+  controller:
+    service:
+      enableHttp: true
+      enableHttps: true
+      type: LoadBalancer
+      loadBalancerIP: 155.248.230.45
+      annotations:
+        service.beta.kubernetes.io/oci-load-balancer-shape: "flexible"
+        service.beta.kubernetes.io/oci-load-balancer-shape-flex-min: "10"
+        service.beta.kubernetes.io/oci-load-balancer-shape-flex-max: "10"
+        service.beta.kubernetes.io/oci-load-balancer-backend-protocol: "TCP"
+host: &host api.coinomegacoin.com
+issuer:
+  server: https://acme-v02.api.letsencrypt.org/directory
+kube-prometheus-stack:
+  grafana:
+    grafana.ini:
+      server:
+        domain: &host
+        root_url: https://api.coinomegacoin.com/grafana/
+        serve_from_sub_path: true

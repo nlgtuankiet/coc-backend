@@ -1,0 +1,12 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: coc-certificate
+  namespace: default
+spec:
+  secretName: coc-certificate
+  issuerRef:
+    name: letsencrypt
+  commonName: {{ .Values.host }}
+  dnsNames:
+  - {{ .Values.host }}
