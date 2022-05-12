@@ -2,9 +2,9 @@
 set -e
 
 ### Build and invoke helm upgrade command
-### 
+###
 ### Flags:
-### -e: set enviroment, valid values are dev/prod, default to dev  
+### -e: set enviroment, valid values are dev/prod, default to dev
 ### -d: do nothing, just print the command for debug only
 ### -i: when set, invoke helm "upgrade" command with -i option
 
@@ -13,6 +13,15 @@ set -e
 env="dev"
 initialize="false"
 debug="false"
+base64Cmd="base64"
+unameOut="$(uname -s)"
+
+case "${unameOut}" in
+    Linux*)
+        echo "Linux detected"
+        base64Cmd="base64 -w 0";;
+esac
+
 while getopts ":e:id" opt; do
     case $opt in
         e)
@@ -22,16 +31,16 @@ while getopts ":e:id" opt; do
         i)
         initialize="true"
         ;;
-        
+
         d)
         debug="true"
         ;;
-        
+
         \?)
         echo "Invalid option: -$OPTARG" >&2
         exit 1
         ;;
-        
+
         :)
         echo "Option -$OPTARG requires an argument." >&2
         exit 1
@@ -56,10 +65,10 @@ if [ -z "$postgres_password" ]; then
 fi
 
 if [ -z "$postgres_password" ]; then
-    exit 1    
+    exit 1
 fi
 # echo "postgres_password -> $postgres_password"
-postgres_password_base64=$(echo $postgres_password | base64 -w 0 -)
+postgres_password_base64=$(echo $postgres_password | $base64Cmd -)
 
 
 ### Postgres config
@@ -68,12 +77,12 @@ if [ "$env" = "prod" ]; then
     postgres_config=./postgresql.conf.prod
 fi
 echo "postgres_config -> $postgres_config"
-postgres_config_base64=$(base64 -w 0 "$postgres_config")
+postgres_config_base64=$($base64Cmd "$postgres_config")
 
 ### Firebase service account
 firebase_service_account=~/.gcloud/coc-dev-service-account.json
 echo "firebase_service_account -> $firebase_service_account"
-firebase_service_account_file_base64=$(base64 -w 0 "$firebase_service_account")
+firebase_service_account_file_base64=$($base64Cmd "$firebase_service_account")
 
 ### Build helm command
 if [ "$debug" = "true" ]; then
@@ -97,6 +106,6 @@ helm_command="$helm_command --set postgres_config_base64=$postgres_config_base64
 
 if [ "$debug" = "true" ]; then
     echo $helm_command
-else 
+else
     eval $helm_command
 fi
