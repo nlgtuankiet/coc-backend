@@ -430,13 +430,13 @@ wal_buffers = 64MB			# min 32kB, -1 sets based on shared_buffers
 
 # - Where to Log -
 
-log_destination = ''		# Valid values are combinations of
+log_destination = 'csvlog'		# Valid values are combinations of
 					# stderr, csvlog, syslog, and eventlog,
 					# depending on platform.  csvlog
 					# requires logging_collector to be on.
 
 # This is used when logging to stderr:
-logging_collector = off		# Enable capturing of stderr and csvlog
+logging_collector = on		# Enable capturing of stderr and csvlog
 					# into log files. Required to be on for
 					# csvlogs.
 					# (change requires restart)
