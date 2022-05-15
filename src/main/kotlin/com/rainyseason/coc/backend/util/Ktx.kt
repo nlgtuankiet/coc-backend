@@ -3,12 +3,14 @@ package com.rainyseason.coc.backend.util
 import com.google.api.core.ApiFuture
 import com.google.api.core.ApiFutureCallback
 import com.google.api.core.ApiFutures
+import com.google.cloud.Timestamp
 import com.google.common.util.concurrent.MoreExecutors
 import io.vertx.core.Handler
 import io.vertx.ext.auth.User
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
+import org.threeten.bp.Instant
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -80,4 +82,14 @@ fun <T> Handler<T>.then(
     } else {
         this@then
     }
+}
+
+fun Timestamp.asInstant(): Instant {
+    return Instant.ofEpochSecond(seconds, nanos.toLong())
+}
+
+private val escapedMarkdownRegex = """[\_\*\[\]\(\)\~\`\>\#\+\-\=\|\{\}\.\!]""".toRegex()
+
+fun String.escapedMarkdown(): String {
+    return escapedMarkdownRegex.replace(this, """\\$0""")
 }

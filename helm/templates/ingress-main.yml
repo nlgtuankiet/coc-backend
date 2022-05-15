@@ -2,25 +2,41 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: coc-main
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
 spec:
   tls:
     - secretName: coc-certificate
       hosts:
-      - {{ .Values.host }}
+        - { { .Values.host } }
   ingressClassName: nginx
   rules:
-    - host: {{ .Values.host }}
+    - host: { { .Values.host } }
       http:
         paths:
-          - path: /s1
-            pathType: ImplementationSpecific
+          - path: /s.*
+            pathType: Prefix
             backend:
               service:
                 name: coc-service
                 port:
                   number: 81
-          - path: /backup/watchlist
-            pathType: ImplementationSpecific
+          - path: /backup/.*
+            pathType: Prefix
+            backend:
+              service:
+                name: coc-service
+                port:
+                  number: 80
+          - path: /firestoreEvent/.*
+            pathType: Prefix
+            backend:
+              service:
+                name: coc-service
+                port:
+                  number: 80
+          - path: /telegramHook/.*
+            pathType: Prefix
             backend:
               service:
                 name: coc-service

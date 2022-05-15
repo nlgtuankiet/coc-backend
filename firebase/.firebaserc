@@ -1,0 +1,7 @@
+{
+  "projects": {
+    "dev": "crypto-jet-dev",
+    "prod": "crypto-jet",
+    "default": "crypto-jet-dev"
+  }
+}

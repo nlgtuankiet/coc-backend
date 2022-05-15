@@ -12,6 +12,7 @@ set -e
 ### Enviroment
 env="dev"
 initialize="false"
+template="false"
 debug="false"
 base64Cmd="base64"
 unameOut="$(uname -s)"
@@ -22,7 +23,7 @@ case "${unameOut}" in
         base64Cmd="base64 -w 0";;
 esac
 
-while getopts ":e:id" opt; do
+while getopts ":e:idt" opt; do
     case $opt in
         e)
         env="$OPTARG"
@@ -30,6 +31,10 @@ while getopts ":e:id" opt; do
 
         i)
         initialize="true"
+        ;;
+
+        t)
+        template="true"
         ;;
 
         d)
@@ -54,6 +59,10 @@ if [ $env != "prod" ] && [ $env != "dev" ]; then
 fi
 echo "env -> $env"
 echo "initialize -> $initialize"
+
+function getMd5() {
+    md5 -q "$1"
+}
 
 ### Postgres password
 postgres_password=`printenv COC_POSTGRES_PASSWORD || echo ''`
@@ -81,17 +90,34 @@ postgres_config_base64=$($base64Cmd "$postgres_config")
 
 ### Firebase service account
 firebase_service_account=~/.gcloud/coc-dev-service-account.json
+if [ "$env" = "prod" ]; then
+    firebase_service_account=~/.gcloud/coc-prod-service-account.json
+fi
 echo "firebase_service_account -> $firebase_service_account"
 firebase_service_account_file_base64=$($base64Cmd "$firebase_service_account")
+
+### App config
+app_config_file=~/.coc/dev.properties
+if [ "$env" = "prod" ]; then
+    app_config_file=~/.coc/prod.properties
+fi
+app_config_file_base64=$($base64Cmd "$app_config_file")
+app_config_file_md5=$(getMd5 $app_config_file)
+echo "app_config_file -> $app_config_file"
 
 ### Build helm command
 if [ "$debug" = "true" ]; then
     firebase_service_account_file_base64="aaa"
     postgres_password_base64="aaa"
     postgres_config_base64="aaa"
+    app_config_file_base64="aaa"
 fi
 
 helm_command="helm upgrade "
+if [ "$template" = "true" ]; then
+    helm_command="helm template "
+fi
+
 if [ "$initialize" = "true" ]; then
     helm_command="$helm_command -i "
 fi
@@ -103,9 +129,11 @@ fi
 helm_command="$helm_command --set firebase_service_account_file_base64=$firebase_service_account_file_base64 "
 helm_command="$helm_command --set postgres_password_base64=$postgres_password_base64 "
 helm_command="$helm_command --set postgres_config_base64=$postgres_config_base64 "
+helm_command="$helm_command --set app_config_file_base64=$app_config_file_base64 "
+helm_command="$helm_command --set app_config_file_md5=$app_config_file_md5 "
 
 if [ "$debug" = "true" ]; then
-    echo $helm_command
+    echo "$helm_command"
 else
-    eval $helm_command
+    eval "$helm_command"
 fi

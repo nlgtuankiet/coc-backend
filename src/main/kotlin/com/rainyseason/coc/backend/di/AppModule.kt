@@ -8,10 +8,13 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.cloud.FirestoreClient
 import com.rainyseason.coc.backend.BuildConfig
 import com.rainyseason.coc.backend.FirebaseAuthProvider
+import com.rainyseason.coc.backend.core.ConfigKeys
+import com.rainyseason.coc.backend.core.getValue
 import com.rainyseason.coc.backend.data.RawJsonAdapter
 import com.rainyseason.coc.backend.data.coingecko.CoinGeckoService
 import com.rainyseason.coc.backend.data.coingecko.model.ComplexMessageJsonAdapter
-import com.rainyseason.coc.backend.data.http.UrlInterceptor
+import com.rainyseason.coc.backend.data.telegram.TelegramService
+import com.rainyseason.coc.backend.util.Env
 import com.rainyseason.coc.backend.util.getLogger
 import com.squareup.moshi.Moshi
 import dagger.Module
@@ -22,7 +25,13 @@ import io.vertx.ext.web.handler.JWTAuthHandler
 import io.vertx.json.schema.SchemaParser
 import io.vertx.json.schema.SchemaRouter
 import io.vertx.json.schema.SchemaRouterOptions
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
 import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
+import org.apache.commons.configuration2.ConfigurationUtils
+import org.apache.commons.configuration2.ImmutableConfiguration
+import org.apache.commons.configuration2.builder.fluent.Configurations
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import java.io.File
@@ -52,10 +61,26 @@ object AppModule {
     @Provides
     @Singleton
     fun baseClient(
-        urlInterceptor: UrlInterceptor,
+        buildConfig: BuildConfig,
     ): OkHttpClient {
         return OkHttpClient.Builder()
-            .addInterceptor(urlInterceptor)
+            .apply {
+                val logLevel = when (buildConfig.httpLog) {
+                    "BASIC" -> HttpLoggingInterceptor.Level.BASIC
+                    "HEADERS" -> HttpLoggingInterceptor.Level.HEADERS
+                    "BODY" -> HttpLoggingInterceptor.Level.BODY
+                    else -> null
+                }
+                if (logLevel != null) {
+                    val logger = getLogger<HttpLoggingInterceptor>()
+                    val interceptor = HttpLoggingInterceptor {
+                        logger.debug(it)
+                    }
+                    interceptor.level = logLevel
+
+                    addInterceptor(interceptor)
+                }
+            }
             .build()
     }
 
@@ -75,19 +100,31 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun schemaParser(vertx: Vertx): SchemaParser {
-        val schemaRouter = SchemaRouter.create(vertx, SchemaRouterOptions())
-        return SchemaParser.createDraft201909SchemaParser(schemaRouter)
+    fun telegramService(
+        moshi: Moshi,
+        okHttpClient: OkHttpClient,
+        config: ImmutableConfiguration,
+    ): TelegramService {
+        val token = config.getValue(ConfigKeys.TelegramBotToken)
+        return Retrofit.Builder()
+            .baseUrl("https://api.telegram.org/bot$token/")
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
+            .callFactory(okHttpClient)
+            .build()
+            .create(TelegramService::class.java)
     }
 
     @Provides
     @Singleton
-    fun buildConfig(): BuildConfig {
-        return BuildConfig(
-            isDebug = System.getenv("VERTX_DEBUG") == "true"
-        ).also {
-            log.debug("config: $it")
-        }
+    fun appScope(): CoroutineScope {
+        return CoroutineScope(SupervisorJob())
+    }
+
+    @Provides
+    @Singleton
+    fun schemaParser(vertx: Vertx): SchemaParser {
+        val schemaRouter = SchemaRouter.create(vertx, SchemaRouterOptions())
+        return SchemaParser.createDraft201909SchemaParser(schemaRouter)
     }
 
     @Provides
@@ -122,5 +159,13 @@ object AppModule {
             .setCredentials(GoogleCredentials.fromStream(jsonFileStream))
             .build()
         return FirebaseApp.initializeApp(options)
+    }
+
+    @Provides
+    @Singleton
+    fun config(): ImmutableConfiguration {
+        val path = Env.CONFIG_FILE_PATH
+        val config = Configurations().properties(File(path))
+        return ConfigurationUtils.unmodifiableConfiguration(config)
     }
 }

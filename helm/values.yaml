@@ -3,6 +3,8 @@ firebase_service_account_file_name: firebase-service-account.json
 firebase_service_account_file_base64: override-this
 postgres_password_base64: override-this
 postgres_config_base64: override-this
+app_config_file_md5: override-this
+app_config_file_base64: override-this
 ingress-nginx:
   controller:
     service:

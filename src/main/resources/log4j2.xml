@@ -12,6 +12,9 @@
         <Logger name="io.vertx" level="DEBUG" additivity="false">
             <AppenderRef ref="Console"/>
         </Logger>
+        <Logger name="okhttp3" level="DEBUG" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
 <!--        <Root level="debug">-->
 <!--            <AppenderRef ref="Console"/>-->
 <!--        </Root>-->
