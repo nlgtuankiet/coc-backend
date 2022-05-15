@@ -13,6 +13,8 @@ import com.rainyseason.coc.backend.core.getValue
 import com.rainyseason.coc.backend.data.RawJsonAdapter
 import com.rainyseason.coc.backend.data.coingecko.CoinGeckoService
 import com.rainyseason.coc.backend.data.coingecko.model.ComplexMessageJsonAdapter
+import com.rainyseason.coc.backend.data.onesignal.OneSignalAuthInterceptor
+import com.rainyseason.coc.backend.data.onesignal.OneSignalService
 import com.rainyseason.coc.backend.data.telegram.TelegramService
 import com.rainyseason.coc.backend.util.Env
 import com.rainyseason.coc.backend.util.getLogger
@@ -96,6 +98,25 @@ object AppModule {
             .callFactory(okHttpClient)
             .build()
             .create(CoinGeckoService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun oneSignalService(
+        okHttpClient: OkHttpClient,
+        moshi: Moshi,
+        oneSignalAuthInterceptor: OneSignalAuthInterceptor,
+    ): OneSignalService {
+        val callFactory = okHttpClient
+            .newBuilder()
+            .addInterceptor(oneSignalAuthInterceptor)
+            .build()
+        return Retrofit.Builder()
+            .baseUrl(OneSignalService.BASE_URL)
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
+            .callFactory(callFactory)
+            .build()
+            .create(OneSignalService::class.java)
     }
 
     @Provides

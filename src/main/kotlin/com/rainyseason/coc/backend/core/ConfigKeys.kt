@@ -8,6 +8,8 @@ object ConfigKeys {
     val TelegramBotToken = StringConfigKey("telegramBotToken")
     val TelegramBotAndAdminChatId = LongConfigKey("telegramBotAndAdminChatId")
     val Host = StringConfigKey("host")
+    val oneSignalApiKey = StringConfigKey("oneSignalApiKey")
+    val oneSignalAppId = StringConfigKey("oneSignalAppId")
 
     fun checkAll(config: ImmutableConfiguration) {
         listOf(
@@ -16,6 +18,8 @@ object ConfigKeys {
             TelegramBotToken,
             TelegramBotAndAdminChatId,
             Host,
+            oneSignalApiKey,
+            oneSignalAppId,
         ).forEach { key ->
             when (key) {
                 is StringConfigKey -> config.getValue(key)
