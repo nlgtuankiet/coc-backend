@@ -8,10 +8,10 @@ spec:
   tls:
     - secretName: coc-certificate
       hosts:
-        - { { .Values.host } }
+        - {{ .Values.host }}
   ingressClassName: nginx
   rules:
-    - host: { { .Values.host } }
+    - host: {{ .Values.host }}
       http:
         paths:
           - path: /s.*

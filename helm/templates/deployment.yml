@@ -3,7 +3,7 @@ kind: Secret
 metadata:
   name: coc-backend-config-{{ .Values.app_config_file_md5 }}
 data:
-  config.properties: { { .Values.app_config_file_base64 } }
+  config.properties: {{ .Values.app_config_file_base64 }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -24,7 +24,7 @@ spec:
       volumes:
         - name: firebase-volume
           secret:
-            secretName: { { .Values.firebase_service_account_secret_name } }
+            secretName: {{ .Values.firebase_service_account_secret_name }}
         - name: config-volume
           secret:
             secretName: coc-backend-config-{{ .Values.app_config_file_md5 }}
@@ -37,7 +37,7 @@ spec:
             - name: PORT
               value: "81"
         - name: main-app
-          image: nlgtuankiet/coc-backend:1.0.6
+          image: nlgtuankiet/coc-backend:1.0.7
           args:
             - app=api
             # - debug=true
