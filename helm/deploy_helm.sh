@@ -12,6 +12,7 @@ set -e
 ### Enviroment
 env="dev"
 initialize="false"
+local=false
 template="false"
 debug="false"
 base64Cmd="base64"
@@ -23,7 +24,7 @@ case "${unameOut}" in
         base64Cmd="base64 -w 0";;
 esac
 
-while getopts ":e:idt" opt; do
+while getopts ":e:idtl" opt; do
     case $opt in
         e)
         env="$OPTARG"
@@ -39,6 +40,10 @@ while getopts ":e:idt" opt; do
 
         d)
         debug="true"
+        ;;
+
+        l)
+        local=true
         ;;
 
         \?)
@@ -131,6 +136,9 @@ helm_command="$helm_command --set postgres_password_base64=$postgres_password_ba
 helm_command="$helm_command --set postgres_config_base64=$postgres_config_base64 "
 helm_command="$helm_command --set app_config_file_base64=$app_config_file_base64 "
 helm_command="$helm_command --set app_config_file_md5=$app_config_file_md5 "
+if [ "$local" = true ]; then
+    helm_command="$helm_command --set issuer.server=https://acme-staging-v02.api.letsencrypt.org/directory "
+fi
 
 if [ "$debug" = "true" ]; then
     echo "$helm_command"
